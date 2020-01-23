@@ -28,3 +28,17 @@ Colours should be user-customisable.
 - The number of villages is historically variable, but we will just go with the common '7'.
 - Left-aligned as in, each player's house is on the left side of the board from their perspective, and they move their seeds from right to left.
 
+
+# Developer setup
+
+There is only one developer.
+
+## Keian
+
+- Writes code in NEdit.
+- Compiles code with javac.
+- Writes documentation (e.g. this) in Vi IMproved.
+- Is reading [Wikipedia Bahasa Melayu's page on Congkak](https://ms.wikipedia.org/wiki/Congkak) for reference.
+- Is on Debian Buster (10.2).
+- Is on Common Desktop Environment.
+

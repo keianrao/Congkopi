@@ -1,5 +1,7 @@
 <!-- This README file is for Github. -->
 
+# Congkopi
+
 A Swing/AWT implementation of the board game of Congkak.
 Congkak is the Malaysian variant of Southeast Asian mancala.
 
