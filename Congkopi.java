@@ -6,10 +6,7 @@ Contains the game data structures, logic and actions.
 **/
 public class Congkopi {
 
-Congkopi runtime;
-CongkopiGUI gui;
-
-public static void main(String.. args) {
+public static void main(String... args) {
 	if (args.length != 0) {
 		System.err.println(
 			"Sorry, this game doesn't accept command-line options yet.. " +
@@ -20,106 +17,144 @@ public static void main(String.. args) {
 	}
 	// To-do: Craft a quick version of getopt
 
-	runtime = new Congkopi();
-	gui = new CongkopiGUI(gui);
+	Congkopi runtime = new Congkopi();
+	CongkopiGUI gui = new CongkopiGUI(runtime);
 }
+
 
 
 //  \\  //  \\  //  \\
 
 
-public final int VILLAGE_COUNT = 7;
+
+public final static int VILLAGE_COUNT = 7;
 // Please do not make this '1000'.
 
-int[]
-	hangTuahVillages = new int[VILLAGE_COUNT + 1],
-	hangJebatVillages = new int[VILLAGE_COUNT + 1];
-/*
-These are int's because they represent the number of seeds in them.
 
-The arrays go like this: villages[0] is a player's house.
-villages[1] to villages[VILLAGE_COUNT] is a player's villages.
-So villages are one-indexed.
-*/
+private static final class Player {
+	String name;
+	final int[] villages = new int[VILLAGE_COUNT];
+	int house = 0;
+	
+	Player(String name) { this.name = name; }
+}
+
+Player
+	hangTuah = new Player("Hang Tuah"), 
+	hangJebat = new Player("Hang Jebat");
 /*
 I have two symmetrical players, don't know what to name them.
 So I named them after the two characters of Hikayat Hang Tuah.
 */
 
+Player playerForThisTurn = hangTuah;
 
-emptyHangTuahVillage(int number) {
-	if (number < 0 || number > hangTuahVillages.length) {
+/*
+Note: These are package-visible, and are used 
+directly by CongkopiGUI.
+*/
+
+
+
+void emptyVillage(Player emptier, Player opponent, int villageIndex) {
+	// Check that villageIndex is a proper value.
+	if (villageIndex < 0 || villageIndex > emptier.villages.length) {
 		throw new IndexOutOfBoundsException(
-			"emptyHangTuahVillage: Tried to empty non-existent village!"
+			"Tried to empty non-existent village for " +
+			emptier.name + "!"
 		);
 	}
-	else if (number == 0) {
-		throw new IndexOutOfBoundsException(
-			"emptyHangTuahVillage: #0 is the player's house, not a village!"
-		);
-	}
-		
 	
-	int seedsInHand = hangTuahVillages[number];
-	hangTuahVillages[number] = 0;
+	// Okay, empty that village, and put seeds in hand.
+	int seedsInHand = emptier.villages[villageIndex];
+	emptier.villages[villageIndex] = 0;
 	
+	// Start emptying our hand.
+	int currentVillageIndex = villageIndex;
+	boolean onOpposingSide = false;
+	Player playerForNextTurn = opponent;
 	
-	int currentVillage = number;
 	while (seedsInHand > 1) {
-		--currentVillage;
-				
-		if (currentVillage >= 0) {
-			++hangTuahVillages[currentVillage];
-		}
-		else if (currentVillage >= -7) {
-			++hangJebatVillages[currentVillage + (VILLAGE_COUNT + 1)];
-			/*
-			For example, assuming VILLAGE_COUNT = 7:
-			currentVillage =~ -1 -> ++hangJebatVillages[7]
-			currentVillage == -4 -> ++hangJebatVillages[4]
-			currentVillage = -7 -> ++hangJebatVillages[1]
-			*/
+		--currentVillageIndex;
+		
+		if (!onOpposingSide) {
+			if (currentVillageIndex >= 0) {
+				// Usual scenario. Just drop a seed.
+				++emptier.villages[currentVillageIndex];
+				--seedsInHand;
+			}
+			else if (currentVillageIndex == -1) {
+				// We've reached emptier's house.
+				++emptier.house;
+				--seedsInHand;
+				// We still have seeds, so let's switch over.
+				onOpposingSide = true;
+				currentVillageIndex = opponent.villages.length;
+			}
 		}
 		else {
-			/*
-			There were so many seeds that we went one full circle.
-			Keep seeds in hand. Skip over Hang Jebat's house, and
-			reset back to furthest village for Hang Tuah.
-			*/
-			currentVillage = 7;
+			if (currentVillageIndex >= 0) {
+				// Giving seeds to opponent...
+				++opponent.villages[currentVillageIndex];
+				--seedsInHand;
+			}
+			else if (currentVillageIndex == -1) {
+				// We've reached opponent's house.
+				++opponent.house;
+				--seedsInHand;
+				// We still have even more seeds, so 
+				// let's switch over again.
+				onOpposingSide = false;
+				currentVillageIndex = emptier.villages.length;
+			}
 		}
 	}
 	
-	// Okay, we are on our last seed.
-
-	if (currentVillage >= 0) {
-		++hangTuahVillages[currentVillage];
-		if (hangTuahVillages[currentVillage] == 1) {
-			// We had just landed on an empty house. Capture!
-			hangTuahVillages[0] 
-				+= hangJebatVillages[currentVillage + (VILLAGE_COUNT + 1)];
-			hangJebatVillages[currentVillage + (VILLAGE_COUNT + 1)] 
-				= 0;
+	
+	// Okay, we're on our last seed.
+	if (!onOpposingSide) {
+		if (currentVillageIndex >= 0) {
+			// Putting last seed in one of emptier's villages.
+			++emptier.villages[currentVillageIndex];
+			
+			if (emptier.villages[currentVillageIndex] == 1) {
+				/*
+				We just dropped our last seed in
+				an empty village. Capture opponents' seeds!
+				*/
+				int opposingVillageIndex =
+					opponent.villages.length - 1 - currentVillageIndex;
+				
+				emptier.house += opponent.villages[opposingVillageIndex];
+				opponent.villages[opposingVillageIndex] = 0;			
+			}
+		}
+		else if (currentVillageIndex == 0) {
+			// Putting last seed in emptier's house!
+			++emptier.house;
+			playerForNextTurn = emptier;
 		}
 	}
-	/*
-	To-do:
-	Do nothing if landed in Hang Jebat's house.
-	What to do if landed in Hang Jebat's village?
-	How do we implement going another turn
-	when Hang Tuah landed in their own house?
-	*/
-}
-
-
-emptyHangJebatVillage(int number) {
-	if (number < 0 || number > hangJebatVillages.length)
-		throw new IndexOutOfBoundsException(
-			"Tried to empty non-existent village " +
-			"on Hang Jebat's side!"
-		);
+	else {
+		if (currentVillageIndex > 0) {
+			++opponent.villages[currentVillageIndex];
+			// Do we still follow capture rule if we are
+			// on opposing side?
+		}
+		else {
+			// Putting last seed in opponent's house.
+			++opponent.house;
+		}
+	}
 	
+	
+	// Okay, update 'playerForThisTurn' for next turn.
+	playerForThisTurn = playerForNextTurn;
 }
+
+
+// Okay, we either have a game method, or the GUI literally just
+// uses #emptyVillage and playerForThisTurn to play the game.
 
 
 }
