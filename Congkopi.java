@@ -1,10 +1,14 @@
 
+import java.util.ArrayList;
+
 /**
 
 Contains the game data structures, logic and actions.
 
 **/
 public class Congkopi {
+
+//	\\	Main  	//	\\	//	\\	//	\\
 
 public static void main(String... args) {
 	if (args.length != 0) {
@@ -23,138 +27,85 @@ public static void main(String... args) {
 
 
 
-//  \\  //  \\  //  \\
-
-
+//	\\	State 	//	\\	//	\\	//	\\
 
 public final static int VILLAGE_COUNT = 7;
-// Please do not make this '1000'.
+// Please do not make this very large.
 
 
-private static final class Player {
+private static class Player {
 	String name;
-	final int[] villages = new int[VILLAGE_COUNT];
-	int house = 0;
-	
-	Player(String name) { this.name = name; }
 }
 
-Player
-	hangTuah = new Player("Hang Tuah"), 
-	hangJebat = new Player("Hang Jebat");
+private Player perak = new Player();
+private Player johor = new Player();
+{
+	perak.name = "Hang Jebat";
+	johor.name = "Hang Tuah";
+}
 /*
-I have two symmetrical players, don't know what to name them.
-So I named them after the two characters of Hikayat Hang Tuah.
-*/
-
-Player playerForThisTurn = hangTuah;
-
-/*
-Note: These are package-visible, and are used 
-directly by CongkopiGUI.
+Hard to come up with variable names for symmetrical elements..
 */
 
 
+private static class Bin {
+	private int biji;
+	private Player owner;
+	void addBiji(int n) { biji += n; }
+	void removeBiji(int n) { biji -= n; }
+	void setOwner(Player player) { owner = player; }
+	Player getOwner() { return owner; }
+}
+private static class Kampung extends Bin { }
+private static class Rumah extends Bin { }
 
-void emptyVillage(Player emptier, Player opponent, int villageIndex) {
-	// Check that villageIndex is a proper value.
-	if (villageIndex < 0 || villageIndex > emptier.villages.length) {
-		throw new IndexOutOfBoundsException(
-			"Tried to empty non-existent village for " +
-			emptier.name + "!"
-		);
+private ArrayList<Bin> bins = new ArrayList<Bin>((VILLAGE_COUNT + 1) * 2);
+{
+	// Perak.
+	Rumah rumah = new Rumah();
+	rumah.setOwner(perak);
+	bins.add(rumah);
+	for (int o = 0; o < VILLAGE_COUNT; ++o) {
+		Kampung kampung = new Kampung();
+		kampung.setOwner(perak);
+		bins.add(kampung);
 	}
 	
-	// Okay, empty that village, and put seeds in hand.
-	int seedsInHand = emptier.villages[villageIndex];
-	emptier.villages[villageIndex] = 0;
-	
-	// Start emptying our hand.
-	int currentVillageIndex = villageIndex;
-	boolean onOpposingSide = false;
-	Player playerForNextTurn = opponent;
-	
-	while (seedsInHand > 1) {
-		--currentVillageIndex;
-		
-		if (!onOpposingSide) {
-			if (currentVillageIndex >= 0) {
-				// Usual scenario. Just drop a seed.
-				++emptier.villages[currentVillageIndex];
-				--seedsInHand;
-			}
-			else if (currentVillageIndex == -1) {
-				// We've reached emptier's house.
-				++emptier.house;
-				--seedsInHand;
-				// We still have seeds, so let's switch over.
-				onOpposingSide = true;
-				currentVillageIndex = opponent.villages.length;
-			}
-		}
-		else {
-			if (currentVillageIndex >= 0) {
-				// Giving seeds to opponent...
-				++opponent.villages[currentVillageIndex];
-				--seedsInHand;
-			}
-			else if (currentVillageIndex == -1) {
-				// We've reached opponent's house.
-				++opponent.house;
-				--seedsInHand;
-				// We still have even more seeds, so 
-				// let's switch over again.
-				onOpposingSide = false;
-				currentVillageIndex = emptier.villages.length;
-			}
-		}
+	// Johor.
+	rumah = new Rumah();
+	rumah.setOwner(johor);
+	bins.add(rumah);
+	for (int o = 0; o < VILLAGE_COUNT; ++o) {
+		Kampung kampung = new Kampung();
+		kampung.setOwner(johor);
+		bins.add(kampung);
 	}
-	
-	
-	// Okay, we're on our last seed.
-	if (!onOpposingSide) {
-		if (currentVillageIndex >= 0) {
-			// Putting last seed in one of emptier's villages.
-			++emptier.villages[currentVillageIndex];
-			
-			if (emptier.villages[currentVillageIndex] == 1) {
-				/*
-				We just dropped our last seed in
-				an empty village. Capture opponents' seeds!
-				*/
-				int opposingVillageIndex =
-					opponent.villages.length - 1 - currentVillageIndex;
-				
-				emptier.house += opponent.villages[opposingVillageIndex];
-				opponent.villages[opposingVillageIndex] = 0;			
-			}
-		}
-		else if (currentVillageIndex == 0) {
-			// Putting last seed in emptier's house!
-			++emptier.house;
-			playerForNextTurn = emptier;
-		}
-	}
-	else {
-		if (currentVillageIndex > 0) {
-			++opponent.villages[currentVillageIndex];
-			// Do we still follow capture rule if we are
-			// on opposing side?
-		}
-		else {
-			// Putting last seed in opponent's house.
-			++opponent.house;
-		}
-	}
-	
-	
-	// Okay, update 'playerForThisTurn' for next turn.
-	playerForThisTurn = playerForNextTurn;
 }
 
 
-// Okay, we either have a game method, or the GUI literally just
-// uses #emptyVillage and playerForThisTurn to play the game.
+public static enum State {
+	DISTRIBUTING
+}
+private State currentState;
+private Player currentPlayer;
+private boolean distributing;
+
+
+
+//  \\  Interface   \\  //  \\  //  \\
+
+State getState() { return currentState; }
+
+Player getPlayerWhoOwns(Bin bin) {
+	return bin.getOwner();
+}
+
+boolean canDistribute(Bin bin) {
+	if (!distributing) return false;
+	if (!(bin instanceof Kampung)) return false;
+	if (getPlayerWhoOwns(bin) != currentPlayer) return false;
+	return true;
+}
 
 
 }
