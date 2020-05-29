@@ -13,4 +13,5 @@ Further details (specification, etc.) are in DEVDETAILS.md.
 This game is not yet licensed, but it should end up being GPL'd.
 
 Current state of the game:
+
 ![Screenshot of a green background and board-shaped brown thing in the middle. There is nothing else.](Screenshot.jpg)
