@@ -3,6 +3,8 @@ import javax.swing.JFrame;
 import javax.swing.JPanel;
 import java.awt.Dimension;
 import java.awt.Color;
+import java.awt.Graphics;
+import java.awt.image.BufferedImage;
 
 /**
 
@@ -36,7 +38,7 @@ CongkopiGUI(Congkopi game) {
 	It's the hard part.
 	The one below's a stub.
 	*/
-	mainpanel = new JPanel();
+	mainpanel = new CongkopiPanel();
 	mainpanel.setPreferredSize(new Dimension(640, 480));
 	/*
 	Should we be hardcoding values?
@@ -48,6 +50,69 @@ CongkopiGUI(Congkopi game) {
 	
 	// Alright, roll the curtains.
 	mainframe.setVisible(true);
+}
+
+class CongkopiPanel extends JPanel {
+	BufferedImage skin = null;
+
+	public void paintComponent(Graphics g) {
+		if (skin != null) {
+			g.drawImage(skin, 0, 0, getWidth(), getHeight(), this);
+		}
+		else {
+			// Draw something with AWT graphics.
+			
+			g.setColor(new Color(97, 142, 41));
+			g.fillRect(0, 0, getWidth(), getHeight());
+			
+			// Let's do things guide style..
+			int
+				xCentre = getWidth() / 2,
+				yCentre = getHeight() / 2;
+			int
+				lubangMargin = 16,
+				kampungRadius = 32, rumahRadius = 64;
+			int
+				kampung2Breadth =
+					(kampungRadius * 7) + (lubangMargin * 6),
+				rumahBreadth =
+					rumahRadius + (2 * lubangMargin),
+				boardBreadth =
+					kampung2Breadth + (2 * rumahBreadth);
+			int
+				kampung2LeftEdgeX = xCentre - (kampung2Breadth / 2),
+				kampung2RightEdgeX = getWidth() - kampung2LeftEdgeX,
+				boardLeftEdgeX = kampung2LeftEdgeX - rumahBreadth,
+				boardTopEdgeY = yCentre - (rumahBreadth / 2);
+			
+			
+			g.setColor(new Color(93, 44, 34));
+				
+			// Draw rumah2 sections of the board.
+			g.fillOval(
+				boardLeftEdgeX, boardTopEdgeY,
+				rumahBreadth, rumahBreadth
+			);
+			g.fillOval(
+				kampung2RightEdgeX, boardTopEdgeY,
+				rumahBreadth, rumahBreadth
+			);
+			
+			// Draw kampung2 sections of the board.
+			g.fillRect(
+				kampung2LeftEdgeX - (rumahBreadth / 2), boardTopEdgeY,
+				kampung2Breadth + rumahBreadth, rumahBreadth
+			);
+			
+			
+			g.setColor(new Color(15, 2, 1));
+			
+			// Okay, draw rumah2 themselves.
+			
+			// Then draw kampung2 themselves. Be careful of margins!
+		}
+	}
+
 }
 
 }
