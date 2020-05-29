@@ -62,8 +62,15 @@ class CongkopiPanel extends JPanel {
 		else {
 			// Draw something with AWT graphics.
 			
+			// Draw a background first..
 			g.setColor(new Color(97, 142, 41));
 			g.fillRect(0, 0, getWidth(), getHeight());
+			// Draw herringbone for kicks.
+			g.setColor(new Color(255, 255, 255, 25));
+			for (int y = 1; y < getWidth(); y += 3) {
+				g.fillRect(0, y, getWidth(), 1);
+			}
+			
 			
 			// Let's do things guide style..
 			int
