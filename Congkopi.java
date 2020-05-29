@@ -27,55 +27,136 @@ public static void main(String... args) {
 
 
 
-
 //	\\	State 	//	\\	//	\\	//	\\
 
-private static abstract class Bin {
-	private int biji;
-	private Player owner;
-	private int index;
-	
-	void addBiji(int n) { biji += n; }
-	void removeBiji(int n) { biji -= n; }
-	int getBiji() { return biji; }
-	
-	void setOwner(Player player) { owner = player; }
-	Player getOwner() { return owner; }
-	
-	void setIndex(int index) { this.index = index; }
-	int getIndex() { return index; }
-	
-	/*
-	A bin - in this game too - maps really cleanly to a struct,
-	so it's weird to have an object with getters and setters
-	rather than one with open fields.
-	
-	But anyways this is fine for now. It's semantic anyways.
-	*/
-}
-private static class Kampung extends Bin { }
-private static class Rumah extends Bin { }
+private final static int KAMPUNG_PER_PLAYER = 7;
+private final static int LUBANG_PER_PLAYER = KAMPUNG_PER_PLAYER + 1;
+private final static int BOARD_BREADTH = LUBANG_PER_PLAYER;
 
-
-
-private final static int VILLAGE_COUNT = 7;
-private final static int BIN_COUNT = VILLAGE_COUNT + 1;
-private Bin[] board = new Bin[(VILLAGE_COUNT + 1) * 2];
-
-
-
-private static class Player {
+private class Player {
 	String name;
 }
-private Player[] players;
 
-
-
-private int currentPlayerIndex;
-private boolean distributing;
-public static enum Stage {
+private enum BoardState {
 	DISTRIBUTING,
+	EVALUATING,
 	WAITING
+}
+
+private class Board {
+	Player player1, player2;
+	Player currentPlayer;
+	
+	int[] lubang = new int[2 * LUBANG_PER_PLAYER];
+	
+	final int PLAYER1_RUMAH_OFFSET 
+		= LUBANG_PER_PLAYER - 1; // 8th = lubang[7]
+	final int PLAYER2_RUMAH_OFFSET
+		= PLAYER1_RUMAH_OFFSET + BOARD_BREADTH;
+	
+	void distribute(int offset) {
+		if (offset == PLAYER1_RUMAH ||
+		 	offset == PLAYER2_RUMAH) {
+			crashAndBurn();
+		}
+		
+		// Okay, pick up all the seeds from that lubang..
+		int bijiInHand = lubang[offset];
+		lubang[offset] = 0;
+		
+		while (bijiInHand > 0) {
+			/*
+			* Move to the next *kampung*. So skip over 
+			* the player rumah, and wrap around the board 
+			* if necessary.
+			*/
+			++offset;
+			if (offset == PLAYER1_RUMAH) ++offset;
+			else if (offset == PLAYER2_RUMAH) offset = 0;
+			
+			// Drop off a biji.
+			--bijiInHand; ++lubang[offset];
+		}
+		
+		// Okay, so we just dropped off our last biji.
+		// 'offset' is still that of the kampung we dropped it in.
+		// See if we can execute those exciting game moves.
+		evaluate(offset);
+		
+		// We're done, so switch over now.
+		switchPlayers();
+	}
+	
+	void crashAndBurn() {
+		System.err.println("Tried to distribute a player's rumah!");
+		System.exit(1);
+	}
+	
+	void evaluate(int offset) {
+		if (lubang[offset] > 1) {
+			// Last biji dropped in a non-empty lubang.
+			// Never anything interesting.
+			return;
+		}
+		
+		else if (lubang[offset] == 1) {
+			// Last biji dropped in an empty lubang.
+			// Time to grab!
+			
+			// First, determine the offset of the opposite side..
+			/*
+			* Consider this example board, of breadth 6.
+			*
+			*      o6   o7   o8   o9   o10
+			*  o5						    o11
+			*      o4   o3   o2   o1   o0
+			*
+			* Player1's lubang are lubang[0] to lubang[5].
+			* Player2's lubang are lubang[6] to lubang[11];
+			*
+			* Suppose the last biji landed on 3.
+			* Its offset from the start of Player1's lubang2 is 3.
+			* The offset of the opposing side, 7 -
+			* its offset from the end of Player2's lubang2 is 3.
+			*/
+			
+			// I'll just do the lazy way of getting this..
+			int currentPlayerRumahOffset, opposingPlayerRumahOffset;
+			if (currentPlayer == player1) {
+				currentPlayerRumahOffset = PLAYER1_RUMAH_OFFSET;
+				opposingPlayerRumahOffset = PLAYER2_RUMAH_OFFSET;
+			}
+			else {
+				currentPlayerRumahOffset = PLAYER2_RUMAH_OFFSET;
+				opposingPlayerRumahOffset = PLAYER1_RUMAH_OFFSET;
+			}
+			
+			// Okay, so the opposing player's rumah is the end.
+			int opposingOffset = opposingPlayerRumahOffset - offset;
+			
+			/*
+			* The way grab works is, you grab all biji from the
+			* opposing side, and put it into your own rumah.
+			*/
+			lubang[currentPlayerRumahOffset] += lubang[opposingOffset];
+			lubang[opposingOffset] = 0;
+			
+			/*
+			* Why are we confusing our calculations?
+			* We can write this method agnostic of "current player".
+			* We can determine who owns the lubang of any offset.
+			* Then we should distribute the opposing lubang's biji
+			* to the rumah of whoever that owner is.
+			*
+			* Please decide whether you want to be stateful or not.
+			*/
+		}
+	}
+	
+	void switchPlayers() {
+		if (currentPlayer == player2) currentPlayer = player1;
+		else currentPlayer = player1;
+	}
 }
 
 
@@ -83,130 +164,17 @@ public static enum Stage {
 //	\\	Constructor	\\	//	\\	//	\\
 
 public Congkopi() {
-	useDefaultPlayers();
-	setupBoard();
-}
-
-private void useDefaultPlayers() {
-	players = new Player[2];
-	
-	players[0] = new Player();
-	players[0].name = "Hang Jebat";
-	
-	players[1] = new Player();
-	players[1].name = "Hang Tuah";
-}
-
-private void setupBoard() {
-	for (int playerIndex = 0; playerIndex < players.length; ++playerIndex) {
-		Player player = players[playerIndex];
-		int startingIndex = playerIndex * BIN_COUNT;
-		
-		// Add all the villages for this player first.
-		int kampungIndex = 0;
-		for (; kampungIndex < VILLAGE_COUNT; ++kampungIndex) {
-			int index = startingIndex + kampungIndex;
-			Kampung kampung = new Kampung();
-			kampung.setOwner(player);
-			kampung.setIndex(index);
-			board[index] = kampung;
-		}
-		
-		// Then add a house.
-		int rumahIndex = VILLAGE_COUNT + 1;
-		int index = startingIndex + rumahIndex;
-		Rumah rumah = new Rumah();
-		rumah.setOwner(player);
-		rumah.setIndex(index);
-		board[index] = rumah;
-	}
+	board = new Board();
+	board.player1 = new Player("Hang Tuah");
+	board.player2 = new Player("Hang Jebat");
 }
 
 
 
 //	\\	Interface 	\\	//	\\	//	\\
 
-Stage getStage() {
-	if (distributing) return Stage.DISTRIBUTING;
-	else return Stage.WAITING;
-}
-
-Bin[] getBoard() {
-	return board;
-}
-
-Player getCurrentPlayer() {
-	return players[currentPlayerIndex];
-}
-
-boolean canDistributeNow(Bin bin) {
-	if (!distributing) return false;
-	if (!(bin instanceof Kampung)) return false;
-	if (getCurrentPlayer() != bin.getOwner()) return false;
-	return true;
-}
-
-void distribute(Bin bin) {
-	if (bin == null) return; // Sure?
-
-	int bijiInHand = bin.getBiji();
-	bin.removeBiji(bijiInHand);
-	int currentIndex = bin.getIndex() + 1;
-	
-	// Okay, distribute away...
-	while (bijiInHand > 0) {
-		if (currentIndex == board.length) {
-			// Loop back to the start of the board.
-			currentIndex = 0;
-		}
-		
-		board[currentIndex].addBiji(1);
-		bijiInHand--;
-	}
-	
-	// Finished distributing.
-	// We still have currentIndex, so we'll see what we landed on..
-	lastBijiLandedOn(board[currentIndex]);
-	
-	// Switch turns to next player.
-	currentPlayerIndex++;
-	if (currentPlayerIndex == players.length) currentPlayerIndex = 0;
-}
 
 
 //  \\  Private //  \\  //  \\  //  \\
-
-private void lastBijiLandedOn(Bin bin) {
-	// Fun game parts.
-	
-	if (players.length != 2) {
-		// I don't know what to do.
-		return;
-	}
-	
-	else {
-		if (getCurrentPlayer() == bin.getOwner()) {
-			if (bin.getBiji() == 0) {
-				// Aha. Time to take opponent's biji.
-				int opposingBinIndex = bin.getIndex() + BIN_COUNT;
-				Bin opposingBin = board[opposingBinIndex];
-
-				int takenBiji = opposingBin.getBiji();
-				opposingBin.removeBiji(takenBiji);
-				bin.addBiji(takenBiji);
-			}
-		
-			else {
-				// What were the rules for this part again?
-				return;
-			}
-		}
-				
-		else {
-			// Again, not sure of the rules here..
-			return;
-		}
-	}
-}
 
 }
