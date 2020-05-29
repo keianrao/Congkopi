@@ -1,6 +1,4 @@
 
-import java.util.ArrayList;
-
 /**
 
 Contains the game data structures, logic and actions.
@@ -21,164 +19,201 @@ public static void main(String... args) {
 	}
 	// To-do: Craft a quick version of getopt
 
-	Congkopi runtime = new Congkopi();
-	CongkopiGUI gui = new CongkopiGUI(runtime);
+	Congkopi game = new Congkopi();
+	CongkopiGUI gui = new CongkopiGUI(game);
 }
 
 
 
 //	\\	State 	//	\\	//	\\	//	\\
 
-private final static int KAMPUNG_PER_PLAYER = 7;
-private final static int LUBANG_PER_PLAYER = KAMPUNG_PER_PLAYER + 1;
-private final static int BOARD_BREADTH = LUBANG_PER_PLAYER;
+// Reminder: All of these are hardcoded for a 2-player board.
+private final static int
+	KAMPUNG_PER_PLAYER = 7,
+	PLAYER1_RUMAH_OFFSET = 8 - 1,
+	PLAYER2_RUMAH_OFFSET = 16 - 1,
+	BOARD_BREADTH = KAMPUNG_PER_PLAYER + 1;
+
+private enum GameState {
+	DISTRIBUTING,
+	EVALUATING,
+	WAITING,
+	GAME_OVER
+}
 
 private class Player {
 	String name;
 }
 
-private enum BoardState {
-	DISTRIBUTING,
-	EVALUATING,
-	WAITING
-}
 
-private class Board {
-	Player player1, player2;
-	Player currentPlayer;
-	
-	int[] lubang = new int[2 * LUBANG_PER_PLAYER];
-	
-	final int PLAYER1_RUMAH_OFFSET 
-		= LUBANG_PER_PLAYER - 1; // 8th = lubang[7]
-	final int PLAYER2_RUMAH_OFFSET
-		= PLAYER1_RUMAH_OFFSET + BOARD_BREADTH;
-	
-	void distribute(int offset) {
-		if (offset == PLAYER1_RUMAH ||
-		 	offset == PLAYER2_RUMAH) {
-			crashAndBurn();
-		}
-		
-		// Okay, pick up all the seeds from that lubang..
-		int bijiInHand = lubang[offset];
-		lubang[offset] = 0;
-		
-		while (bijiInHand > 0) {
-			/*
-			* Move to the next *kampung*. So skip over 
-			* the player rumah, and wrap around the board 
-			* if necessary.
-			*/
-			++offset;
-			if (offset == PLAYER1_RUMAH) ++offset;
-			else if (offset == PLAYER2_RUMAH) offset = 0;
-			
-			// Drop off a biji.
-			--bijiInHand; ++lubang[offset];
-		}
-		
-		// Okay, so we just dropped off our last biji.
-		// 'offset' is still that of the kampung we dropped it in.
-		// See if we can execute those exciting game moves.
-		evaluate(offset);
-		
-		// We're done, so switch over now.
-		switchPlayers();
-	}
-	
-	void crashAndBurn() {
-		System.err.println("Tried to distribute a player's rumah!");
-		System.exit(1);
-	}
-	
-	void evaluate(int offset) {
-		if (lubang[offset] > 1) {
-			// Last biji dropped in a non-empty lubang.
-			// Never anything interesting.
-			return;
-		}
-		
-		else if (lubang[offset] == 1) {
-			// Last biji dropped in an empty lubang.
-			// Time to grab!
-			
-			// First, determine the offset of the opposite side..
-			/*
-			* Consider this example board, of breadth 6.
-			*
-			*      o6   o7   o8   o9   o10
-			*  o5						    o11
-			*      o4   o3   o2   o1   o0
-			*
-			* Player1's lubang are lubang[0] to lubang[5].
-			* Player2's lubang are lubang[6] to lubang[11];
-			*
-			* Suppose the last biji landed on 3.
-			* Its offset from the start of Player1's lubang2 is 3.
-			* The offset of the opposing side, 7 -
-			* its offset from the end of Player2's lubang2 is 3.
-			*/
-			
-			// I'll just do the lazy way of getting this..
-			int currentPlayerRumahOffset, opposingPlayerRumahOffset;
-			if (currentPlayer == player1) {
-				currentPlayerRumahOffset = PLAYER1_RUMAH_OFFSET;
-				opposingPlayerRumahOffset = PLAYER2_RUMAH_OFFSET;
-			}
-			else {
-				currentPlayerRumahOffset = PLAYER2_RUMAH_OFFSET;
-				opposingPlayerRumahOffset = PLAYER1_RUMAH_OFFSET;
-			}
-			
-			// Okay, so the opposing player's rumah is the end.
-			int opposingOffset = opposingPlayerRumahOffset - offset;
-			
-			/*
-			* The way grab works is, you grab all biji from the
-			* opposing side, and put it into your own rumah.
-			*/
-			lubang[currentPlayerRumahOffset] += lubang[opposingOffset];
-			lubang[opposingOffset] = 0;
-			
-			/*
-			* Why are we confusing our calculations?
-			* We can write this method agnostic of "current player".
-			* We can determine who owns the lubang of any offset.
-			* Then we should distribute the opposing lubang's biji
-			* to the rumah of whoever that owner is.
-			*
-			* Please decide whether you want to be stateful or not.
-			*/
-		}
-	}
-	
-	void switchPlayers() {
-		if (currentPlayer == player2) currentPlayer = player1;
-		else currentPlayer = player1;
-	}
-	
-	static int opposingOffset(int offset) {
-		
-	}
-}
+private Player player1, player2, currentPlayer;
+private int[] board;
+private GameState currentGameState;
+/*
+* Instead of directly messing with an array, we can try to break Board 
+* out into its own class. However! Game mechanics vary quite a lot
+* between the different types of boards. So if we break Board out into
+* a new class here, the interface is still going to have to end up
+* hyperspecific.
+*
+* If we depend that much on specific properties of the Board,
+* we might as well just become the board.
+*/
 
 
-
-//	\\	Constructor	\\	//	\\	//	\\
+//	\\	Constructors  	//	\\	//	\\
 
 public Congkopi() {
-	board = new Board();
-	board.player1 = new Player("Hang Tuah");
-	board.player2 = new Player("Hang Jebat");
+	board = new int[2 * BOARD_BREADTH];
+	distributeStartingBiji();
+
+	player1 = new Player();
+	player1.name = "Hang Tuah";
+	player2 = new Player();
+	player2.name = "Hang Jebat";
+	currentPlayer = player1;
+}
+
+
+
+//	\\	Constructor helpers	\\	//	\\
+
+private void distributeStartingBiji() {
+	/*
+	* The rumah2 are to start off empty, while the kampung2 are to be
+	* filled evenly.
+	*
+	* Surprisingly, there's not much reference as to how many seeds.
+	* [1] https://tradisionalsports.blogspot.com/2014/05/congkak.html
+	* This page recommends 5, 7, 8, 9..
+	* [2] https://zikrihusaini.com/cara-untuk-bermain-congkak/
+	* This page recommends 7.
+	*
+	* Ultimately it's up to the players - it's a good parameter to ask.
+	* Anyhow, a default of 7 seems reasonable.
+	*/
+	
+	for (int o = 0; o < board.length; ++o) {
+		if (o == PLAYER1_RUMAH_OFFSET) continue;
+		if (o == PLAYER2_RUMAH_OFFSET) continue;
+		board[o] = 7;
+	}
+	
+	/*
+	* If for some reason animations are added into this game,
+	* this procedure should be modified to instead distribute in a
+	* repeating, circular fashion, like distributing in the game.
+	*/
 }
 
 
 
 //	\\	Interface 	\\	//	\\	//	\\
 
+void distribute(int offset) {
+	currentGameState = GameState.DISTRIBUTING;
+
+	if (offset == PLAYER1_RUMAH_OFFSET ||
+	 	offset == PLAYER2_RUMAH_OFFSET) {
+		return; // Refuse quietly for now
+	}
+
+	// Okay, pick up all the seeds from that board..
+	int bijiInHand = board[offset];
+	board[offset] = 0;
+	
+	while (bijiInHand > 0) {
+		offset = offsetOfNextKampungFrom(offset);
+		// Drop off a biji.
+		--bijiInHand; ++board[offset];
+	}
+	
+	
+	currentGameState = GameState.EVALUATING;
+	
+	/*
+	* bijiInHand became 0, so we just dropped off the last biji.
+	* 'offset' is still that of that last kampung we dropped it in.
+	* Check if there's game events like a capture.
+	*/
+	lastBijiDroppedIn(offset);
+	
+	if (gameIsOver()) {
+		currentGameState = GameState.GAME_OVER;
+	}
+	else {
+		switchToNextPlayer();
+		currentGameState = GameState.WAITING;
+	}
+}
 
 
-//  \\  Private //  \\  //  \\  //  \\
+public Player getCurrentPlayer() {
+	return currentPlayer;
+}
+
+public GameState getGameState() {
+	return currentGameState;
+}
+
+
+
+//  \\  Interface helpers   \\  //  \\
+
+private void lastBijiDroppedIn(int offset) {
+	if (board[offset] > 1) {
+		// Last biji dropped in a non-empty lubang. 
+		// Nothing interesting..
+		return;
+	}
+	else if (board[offset] == 1) {
+		// Last biji dropped in an empty lubang.
+		
+		int oppositeKampungOffset = offsetAcrossFrom(offset);
+		int owningPlayerRumahOffset = offsetOfRumahOfPlayerThatOwns(offset);
+		
+		// Capture!
+		board[owningPlayerRumahOffset] += board[oppositeKampungOffset];
+		board[oppositeKampungOffset] = 0;
+	}
+}
+
+private void switchToNextPlayer() {
+	if (currentPlayer == player2) currentPlayer = player1;
+	else currentPlayer = player1;
+}
+
+private int offsetOfNextKampungFrom(int offset) {
+	if (offset + 1 == PLAYER1_RUMAH_OFFSET) return offset + 2;
+	else if (offset + 1 == PLAYER2_RUMAH_OFFSET) return 0;
+	else return offset + 1;
+}
+
+private int offsetAcrossFrom(int offset) {
+	if (offset + 1 == PLAYER1_RUMAH_OFFSET) return offset + 2;
+	else if (offset + 1 == PLAYER2_RUMAH_OFFSET) return 0;
+	else return offset + 1;
+}
+
+private int offsetOfRumahOfPlayerThatOwns(int offset) {
+	if (offset <= PLAYER1_RUMAH_OFFSET) return PLAYER1_RUMAH_OFFSET;
+	else return PLAYER2_RUMAH_OFFSET;
+}
+
+private boolean gameIsOver() {
+	/*
+	* I'm not 100% sure of the rules of how this goes. I think an
+	* important part is when a player has no more biji to distribute -
+	* like a checkmate.
+	*
+	* Maybe the game just loops back to the other player that
+	* has seeds, and the charade goes until there's one seed left
+	* crawling to the next rumah?
+	*
+	* Or maybe if a player falls into a checkmate, the other player
+	* gets to collect all the remaining seeds into their rumah?
+	*/
+	return false;
+}
 
 }

@@ -11,13 +11,19 @@ Provides a Swing/AWT-based client for {@link Congkopi}.
 **/
 class CongkopiGUI {
 
-Congkopi runtime;
+//	\\	State 	//	\\  //  \\  //  \\
 
-JFrame mainframe;
-JPanel mainpanel;
+private Congkopi game;
 
-CongkopiGUI(Congkopi runtime) {
-	this.runtime = runtime;
+private JFrame mainframe;
+private JPanel mainpanel;
+
+
+
+//	\\	Constructors    //  \\  //  \\
+
+CongkopiGUI(Congkopi game) {
+	this.game = game;
 	
 	// Initialise mainframe.
 	mainframe = new JFrame("Congkopi");
@@ -43,7 +49,5 @@ CongkopiGUI(Congkopi runtime) {
 	// Alright, roll the curtains.
 	mainframe.setVisible(true);
 }
-	
-//	\\	//	\\	//	\\
 
 }
