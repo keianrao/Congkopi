@@ -157,6 +157,10 @@ private class Board {
 		if (currentPlayer == player2) currentPlayer = player1;
 		else currentPlayer = player1;
 	}
+	
+	static int opposingOffset(int offset) {
+		
+	}
 }
 
 

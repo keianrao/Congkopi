@@ -23,13 +23,9 @@ Colours should be user-customisable.
 
 ### 2 players, 7 villages, capture mode, left-aligned
 
-- Firstly, the board is made out of two types of holes that hold seeds. In Malay, holes are called 'lubang', so it's an apt general descriptor.
+- The game code can assume that the board will be the long and common 2-player one.
 
-- Villages are the smaller kind of holes in the board - each player owns the row closest to them. In Malay, they are called 'kampung' (village) or 'rumah anak' (childrens' houses). The number of villages is historically variable, but we will just go with the common '7'.
-
-- Houses are the larger kinds of holes in the board, one for each player - the player owns the one closest to them. Houses serve as the players' seed banks, and the player with the most seeds in their house at the end of the game wins. In Malay, they are called 'rumah' (house) or 'rumah ibu' (mother's house).
-
-- A 2-player board thus is long and thin, with houses on either end and rows of villages in between. Players sit at the sides, not the ends. 
+- The number of villages is historically variable, but we will just go with the common '7'.
 
 - Left-aligned as in, each player's house is to the left of them, at an end of the board. Players distribute seeds from right to left, towards their house.
 
