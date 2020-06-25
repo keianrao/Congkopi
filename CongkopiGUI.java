@@ -5,6 +5,9 @@ import java.awt.Dimension;
 import java.awt.Color;
 import java.awt.Graphics;
 import java.awt.image.BufferedImage;
+import java.awt.Shape;
+import java.awt.geom.Ellipse2D;
+import java.awt.geom.AffineTransform;
 
 /**
 
@@ -13,9 +16,28 @@ Provides a Swing/AWT-based client for {@link Congkopi}.
 **/
 class CongkopiGUI {
 
+//	\\	Main  	//	\\	//	\\	//	\\
+
+public static void main(String... args) {
+	if (args.length != 0) {
+		System.err.println(
+			"Sorry, this game doesn't accept command-line options yet.. " +
+			"There won't be any user configuration through flags - " +
+			"the source code has to be tweaked and recompiled."
+		);
+		System.exit(2);
+	}
+	// To-do: Craft a quick version of getopt
+
+	TwoPlayerBackend backend = new TwoPlayerBackend();
+	CongkopiGUI gui = new CongkopiGUI(backend);
+}
+
+
+
 //	\\	State 	//	\\  //  \\  //  \\
 
-private Congkopi game;
+private TwoPlayerBackend backend;
 
 private JFrame mainframe;
 private JPanel mainpanel;
@@ -24,8 +46,8 @@ private JPanel mainpanel;
 
 //	\\	Constructors    //  \\  //  \\
 
-CongkopiGUI(Congkopi game) {
-	this.game = game;
+CongkopiGUI(TwoPlayerBackend backend) {
+	this.backend = backend;
 	
 	// Initialise mainframe.
 	mainframe = new JFrame("Congkopi");
@@ -120,6 +142,50 @@ class CongkopiPanel extends JPanel {
 		}
 	}
 
+}
+
+
+
+//	\\	Private helpers //  \\  //  \\
+
+private static Shape generateSeedShape() {
+	// Generate random X and Y.
+	// We want the seed in a circular bowl, so use circle math.
+	double angle = Math.random() * 2 * Math.PI;
+	double radius = Math.random() * (32 - 8);
+	// (Radius matches kampungRadius, but we're hardcoding for now.
+	// Making it a bit shorter so it's squarely within the circle)
+	double x = Math.abs(Math.cos(angle) * radius);
+	double y = Math.abs(Math.sin(angle) * radius);
+	
+	// Width and height will be the same for each seed.
+	double w = 4;
+	double h = 1;
+
+	Shape seedShape = new Ellipse2D.Double(x, y, w, h);
+	
+	// Okay, now here's the absurd part. We'll also rotate the seed
+	// randomly, so that it looks naturally placed. We'll use
+	// java.awt.geom.AffineTransform for this, which is happy to
+	// work with java.awt.Shape.
+	
+	// For now we'll generate a new AffineTransform everytime,
+	// but it is rather costly, so if it starts to lag, just pick
+	// one of several predefined angles, and get an already-initialised
+	// AffineTransform for it.
+	AffineTransform rotationTransform = new AffineTransform();
+	rotationTransform.rotate(Math.random() * 2 * Math.PI);
+	
+	// Okay! We're done.
+	seedShape = rotationTransform.createTransformedShape(seedShape);
+	return seedShape;
+}
+
+private static void generateAndAddSeedShapeIfNeeded(Models.Seed seed) {
+	assert seed != null;
+	if (seed.shape == null) {
+		seed.shape = generateSeedShape();
+	}
 }
 
 }

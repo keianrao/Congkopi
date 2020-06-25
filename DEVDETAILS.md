@@ -37,10 +37,8 @@ There is only one developer.
 
 ## Keian
 
-- Writes code in NEdit.
+- Writes code and documentation in NEdit.
 - Compiles code with javac.
-- Writes documentation (e.g. this) in Vi IMproved.
 - Is reading [Wikipedia Bahasa Melayu's page on Congkak](https://ms.wikipedia.org/wiki/Congkak) for reference.
-- Is on Debian Buster (10.2).
+- Is on Debian Buster (10.2 stable).
 - Is on Common Desktop Environment.
-

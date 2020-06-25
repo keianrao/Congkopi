@@ -1,33 +1,18 @@
 
+import java.util.List;
+import java.util.LinkedList;
+import java.util.ArrayList;
+
 /**
 
-Contains the game data structures, logic and actions.
+Contains data structures, logic, and actions for the 
+two-player variant of the game.
 
 **/
-public class Congkopi {
-
-//	\\	Main  	//	\\	//	\\	//	\\
-
-public static void main(String... args) {
-	if (args.length != 0) {
-		System.err.println(
-			"Sorry, this game doesn't accept command-line options yet.. " +
-			"There won't be any user configuration through flags - " +
-			"the source code has to be tweaked and recompiled."
-		);
-		System.exit(2);
-	}
-	// To-do: Craft a quick version of getopt
-
-	Congkopi game = new Congkopi();
-	CongkopiGUI gui = new CongkopiGUI(game);
-}
-
-
+public class TwoPlayerBackend {
 
 //	\\	State 	//	\\	//	\\	//	\\
 
-// Reminder: All of these are hardcoded for a 2-player board.
 private final static int
 	KAMPUNG_PER_PLAYER = 7,
 	PLAYER1_RUMAH_OFFSET = 8 - 1,
@@ -41,35 +26,23 @@ private enum GameState {
 	GAME_OVER
 }
 
-private class Player {
-	String name;
-}
-
-
-private Player player1, player2, currentPlayer;
-private int[] board;
+private Models.Player player1, player2, currentPlayer;
+private List<List<Models.Seed>> board;
 private GameState currentGameState;
-/*
-* Instead of directly messing with an array, we can try to break Board 
-* out into its own class. However! Game mechanics vary quite a lot
-* between the different types of boards. So if we break Board out into
-* a new class here, the interface is still going to have to end up
-* hyperspecific.
-*
-* If we depend that much on specific properties of the Board,
-* we might as well just become the board.
-*/
 
 
 //	\\	Constructors  	//	\\	//	\\
 
-public Congkopi() {
-	board = new int[2 * BOARD_BREADTH];
+public TwoPlayerBackend() {
+	board = new ArrayList<List<Models.Seed>>(2 * BOARD_BREADTH);
+	for (int i = 1; i <= 2 * BOARD_BREADTH; ++i) {
+		board.add(new LinkedList<Models.Seed>());
+	}
 	distributeStartingBiji();
 
-	player1 = new Player();
+	player1 = new Models.Player();
 	player1.name = "Hang Tuah";
-	player2 = new Player();
+	player2 = new Models.Player();
 	player2.name = "Hang Jebat";
 	currentPlayer = player1;
 }
@@ -84,19 +57,20 @@ private void distributeStartingBiji() {
 	* filled evenly.
 	*
 	* Surprisingly, there's not much reference as to how many seeds.
-	* [1] https://tradisionalsports.blogspot.com/2014/05/congkak.html
+	* (1) https://tradisionalsports.blogspot.com/2014/05/congkak.html
 	* This page recommends 5, 7, 8, 9..
-	* [2] https://zikrihusaini.com/cara-untuk-bermain-congkak/
+	* (2) https://zikrihusaini.com/cara-untuk-bermain-congkak/
 	* This page recommends 7.
 	*
 	* Ultimately it's up to the players - it's a good parameter to ask.
 	* Anyhow, a default of 7 seems reasonable.
 	*/
 	
-	for (int o = 0; o < board.length; ++o) {
+	for (int o = 0; o < board.size(); ++o) {
 		if (o == PLAYER1_RUMAH_OFFSET) continue;
 		if (o == PLAYER2_RUMAH_OFFSET) continue;
-		board[o] = 7;
+		for (int seed = 1; seed <= 7; ++seed)
+			board.get(o).add(new Models.Seed());
 	}
 	
 	/*
@@ -119,13 +93,14 @@ void distribute(int offset) {
 	}
 
 	// Okay, pick up all the seeds from that board..
-	int bijiInHand = board[offset];
-	board[offset] = 0;
+	List<Models.Seed> bijiInHand = new LinkedList<Models.Seed>();	
+	bijiInHand.addAll(board.get(offset));
+	board.get(offset).clear();
 	
-	while (bijiInHand > 0) {
+	while (!bijiInHand.isEmpty()) {
 		offset = offsetOfNextKampungFrom(offset);
 		// Drop off a biji.
-		--bijiInHand; ++board[offset];
+		board.get(offset).add(bijiInHand.remove(0));
 	}
 	
 	
@@ -148,7 +123,7 @@ void distribute(int offset) {
 }
 
 
-public Player getCurrentPlayer() {
+public Models.Player getCurrentPlayer() {
 	return currentPlayer;
 }
 
@@ -161,20 +136,21 @@ public GameState getGameState() {
 //  \\  Interface helpers   \\  //  \\
 
 private void lastBijiDroppedIn(int offset) {
-	if (board[offset] > 1) {
+	if (board.get(offset).size() > 1) {
 		// Last biji dropped in a non-empty lubang. 
 		// Nothing interesting..
 		return;
 	}
-	else if (board[offset] == 1) {
+	else if (board.get(offset).size() == 1) {
 		// Last biji dropped in an empty lubang.
 		
 		int oppositeKampungOffset = offsetAcrossFrom(offset);
 		int owningPlayerRumahOffset = offsetOfRumahOfPlayerThatOwns(offset);
 		
 		// Capture!
-		board[owningPlayerRumahOffset] += board[oppositeKampungOffset];
-		board[oppositeKampungOffset] = 0;
+		board.get(owningPlayerRumahOffset)
+			.addAll(board.get(oppositeKampungOffset));
+		board.get(oppositeKampungOffset).clear();
 	}
 }
 
