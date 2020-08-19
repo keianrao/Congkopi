@@ -45,8 +45,7 @@ public static void main(String... args) throws IOException {
 public void generateSeed() {
 	Seed seed = new Seed(
 		128, 32,
-		//Math.random() * (2 * Math.PI)
-		(45 / 360.0) * (2 * Math.PI)
+		Math.random() * (2 * Math.PI)
 	);
 
 	SwingUtilities.invokeLater(new Runnable() {
