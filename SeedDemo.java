@@ -102,12 +102,27 @@ static class Seed {
 			width, length
 		);
 		rotatedShape = 
-			AffineTransform.getRotateInstance(-rotationInRadians/*[1]*/)
+			AffineTransform.getRotateInstance(-rotationInRadians)
 				.createTransformedShape(unrotatedShape);
 		/*
 		* [1] We assume rotation given is clockwise, but anticlockwise is
 		* assumed by AffineTransform#getRotateInstance(double).
 		* I think simply negating the value will swap directions like so.
+		*
+		* Also. This looks completely wrong when the program is run
+		* (as in, either the Javadoc is wrong or we shouldn't negate??).
+		* I think it's actually because of GUI-style y-positioning,
+		* where positive y is towards the bottom. So the 'top left corner'
+		* in our Shape actually becomes the bottom left corner on the screen.
+		*
+		* In that light, the code is working correctly. If there is a
+		* positive angle, the *bottom* end of the seed rotates clockwise.
+		*
+		* To "fix" things, we can try to invert y on the screen, we can
+		* incorrectly edit the angle to look like the argument given
+		* on the screen.. The former is a typical solution, but I'm
+		* not sure how to do it using matrix-based graphics. Lug around a
+		* "camera" matrix, just like many OpenGL programs?
 		*/
 	}
 }
