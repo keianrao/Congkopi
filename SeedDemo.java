@@ -45,7 +45,8 @@ public static void main(String... args) throws IOException {
 public void generateSeed() {
 	Seed seed = new Seed(
 		128, 32,
-		Math.random() * (2 * Math.PI)
+		//Math.random() * (2 * Math.PI)
+		(45 / 360.0) * (2 * Math.PI)
 	);
 
 	SwingUtilities.invokeLater(new Runnable() {
@@ -116,13 +117,20 @@ static class Seed {
 		* in our Shape actually becomes the bottom left corner on the screen.
 		*
 		* In that light, the code is working correctly. If there is a
-		* positive angle, the *bottom* end of the seed rotates clockwise.
+		* positive angle, the bottom end of the seed rotates anticlockwise
+		* (which, if you invert y, looks like the top end of the seed
+		* rotating clockwise)
 		*
 		* To "fix" things, we can try to invert y on the screen, we can
 		* incorrectly edit the angle to look like the argument given
 		* on the screen.. The former is a typical solution, but I'm
 		* not sure how to do it using matrix-based graphics. Lug around a
 		* "camera" matrix, just like many OpenGL programs?
+		*
+		* It's quite a mess.. But for the purposes of Congkopi, where
+		* just like in this demo we're creating random angles, it doesn't
+		* matter that much if it looks incorrect. (Although an explanation
+		* is mandatory, any reader must understand what we're doing)
 		*/
 	}
 }
