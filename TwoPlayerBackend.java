@@ -84,13 +84,21 @@ private void distributeStartingBiji() {
 
 //	\\	Interface 	\\	//	\\	//	\\
 
-void distribute(int offset) {
-	currentGameState = GameState.DISTRIBUTING;
+public Models.Player getCurrentPlayer() {
+	return currentPlayer;
+}
 
-	if (offset == PLAYER1_RUMAH_OFFSET ||
-	 	offset == PLAYER2_RUMAH_OFFSET) {
+public GameState getGameState() {
+	return currentGameState;
+}
+
+
+public void distribute(int offset) {
+	if (offset == PLAYER1_RUMAH_OFFSET || offset == PLAYER2_RUMAH_OFFSET) {
 		return; // Refuse quietly for now
 	}
+	
+	currentGameState = GameState.DISTRIBUTING;
 
 	// Okay, pick up all the seeds from that board..
 	List<Models.Seed> bijiInHand = new LinkedList<Models.Seed>();	
@@ -103,54 +111,77 @@ void distribute(int offset) {
 		board.get(offset).add(bijiInHand.remove(0));
 	}
 	
-	
-	currentGameState = GameState.EVALUATING;
-	
-	/*
-	* bijiInHand became 0, so we just dropped off the last biji.
-	* 'offset' is still that of that last kampung we dropped it in.
-	* Check if there's game events like a capture.
-	*/
-	lastBijiDroppedIn(offset);
-	
-	if (gameIsOver()) {
-		currentGameState = GameState.GAME_OVER;
-	}
-	else {
-		switchToNextPlayer();
-		currentGameState = GameState.WAITING;
-	}
-}
-
-
-public Models.Player getCurrentPlayer() {
-	return currentPlayer;
-}
-
-public GameState getGameState() {
-	return currentGameState;
+	// Okay, bijiInHand is now 0 - we had just dropped off the last biji.
+	// 'offset' is still that of that last kampung we dropped it in.
+	// Pass it as an argument to the next method, it needs it.
+	turnFinished(offset);
 }
 
 
 
 //  \\  Interface helpers   \\  //  \\
 
-private void lastBijiDroppedIn(int offset) {
-	if (board.get(offset).size() > 1) {
-		// Last biji dropped in a non-empty lubang. 
-		// Nothing interesting..
-		return;
+private void turnFinished(int offsetOfLastBijiDrop) {
+	currentGameState = GameState.EVALUATING;
+	
+	/*
+	* Wikipedia's article on mancala mentions several known game events.
+	* But if I am correct, Congkak in particular is simple, it only supports
+	* capturing biji on an opponent's kampung by dropping the last seed
+	* in an empty kampung on your side.
+	*/
+
+	// ..Which is what we will test for now.
+	boolean 
+		lastLubangWasEmpty = false,
+		lastLubangWasOwnedByCurrentPlayer = false,
+		lastLubangWasKampung = false;
+
+ 	lastLubangWasEmpty = board.get(offsetOfLastBijiDrop).size() > 1;
+	lastLubangWasKampung = 
+		offsetOfLastBijiDrop != PLAYER1_RUMAH_OFFSET 
+		&& offsetOfLastBijiDrop != PLAYER2_RUMAH_OFFSET;
+
+	if (currentPlayer == player1) {
+		lastLubangWasOwnedByCurrentPlayer = 
+			offsetOfLastBijiDrop <= PLAYER1_RUMAH_OFFSET;
 	}
-	else if (board.get(offset).size() == 1) {
-		// Last biji dropped in an empty lubang.
-		
-		int oppositeKampungOffset = offsetAcrossFrom(offset);
-		int owningPlayerRumahOffset = offsetOfRumahOfPlayerThatOwns(offset);
-		
-		// Capture!
-		board.get(owningPlayerRumahOffset)
-			.addAll(board.get(oppositeKampungOffset));
-		board.get(oppositeKampungOffset).clear();
+	else if (currentPlayer == player2) {
+		lastLubangWasOwnedByCurrentPlayer = 
+			offsetOfLastBijiDrop > PLAYER1_RUMAH_OFFSET 
+			&& offsetOfLastBijiDrop <= PLAYER2_RUMAH_OFFSET;
+		// (Redundancy for good measure)
+	}
+
+	boolean capture = 
+		lastLubangWasEmpty && lastLubangWasOwnedByCurrentPlayer &&
+		lastLubangWasKampung;
+
+	if (capture) {
+		List<Models.Seed> oppositeKampung, currentPlayerRumah;
+		{
+			int o;
+			if (currentPlayer == player1) o = PLAYER1_RUMAH_OFFSET;
+			else o = PLAYER2_RUMAH_OFFSET;
+			currentPlayerRumah = board.get(o);
+		}
+		oppositeKampung = board.get(offsetAcrossFrom(offsetOfLastBijiDrop));
+
+		currentPlayerRumah.addAll(oppositeKampung);
+		oppositeKampung.clear();
+	}
+
+	// Okay, next game state..
+	if (gameIsOver()) {
+		currentGameState = GameState.GAME_OVER;
+	}
+	else {
+		if (!capture) {
+			switchToNextPlayer();
+			// If a capture happened, then the next player has to
+			// yield their turn. So switch only if not so.
+		}
+		currentGameState = GameState.WAITING;
 	}
 }
 
@@ -169,11 +200,6 @@ private int offsetAcrossFrom(int offset) {
 	if (offset + 1 == PLAYER1_RUMAH_OFFSET) return offset + 2;
 	else if (offset + 1 == PLAYER2_RUMAH_OFFSET) return 0;
 	else return offset + 1;
-}
-
-private int offsetOfRumahOfPlayerThatOwns(int offset) {
-	if (offset <= PLAYER1_RUMAH_OFFSET) return PLAYER1_RUMAH_OFFSET;
-	else return PLAYER2_RUMAH_OFFSET;
 }
 
 private boolean gameIsOver() {
