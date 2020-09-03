@@ -42,7 +42,8 @@ public void interactWith(PapanLocation interactionLocation) {
 	// Otherwise, the interaction is valid.
 	// We'll interpret it as a distribute. Let it roll.
 	
-	lastBijiDroppedIn(distribute(interactionLocation));
+	Lubang lubang = papan.get(interactionLocation);
+	lastBijiDroppedIn(distribute(lubang));
 	
 	if (gameIsOver()) {
 		gameState = CommonModels.GameState.GAME_OVER;
@@ -59,23 +60,21 @@ public void interactWith(PapanLocation interactionLocation) {
 
 //  \\  Interface helpers   \\  //  \\
 
-private Lubang distribute(PapanLocation location) {
-	gameState = CommonModels.GameState.DISTRIBUTING;	
-
-	Lubang current = papan.get(location);
+private Lubang distribute(Lubang lubang) {
+	gameState = CommonModels.GameState.DISTRIBUTING;
 
 	// Okay, pick up all the biji from it..
 	List<CommonModels.Biji> bijiInHand = new LinkedList<>();
-	bijiInHand.addAll(current.biji2);
-	current.biji2.clear();
+	bijiInHand.addAll(lubang.biji2);
+	lubang.biji2.clear();
 	
 	while (!bijiInHand.isEmpty()) {
-		current = current.nextKampung;
+		lubang = lubang.nextKampung;
 		// Drop off a biji.
-		current.biji2.add(bijiInHand.remove(0));
+		lubang.biji2.add(bijiInHand.remove(0));
 	}
 	
-	return current;
+	return lubang;
 }
 
 private void lastBijiDroppedIn(Lubang lubang) {
@@ -134,15 +133,11 @@ public enum PapanLocation {
 	PEMAIN2_KAMPUNG1, PEMAIN2_KAMPUNG2, PEMAIN2_KAMPUNG3,
 	PEMAIN2_KAMPUNG4, PEMAIN2_KAMPUNG5, PEMAIN2_KAMPUNG6,
 	PEMAIN2_KAMPUNG7, PEMAIN2_RUMAH;
-	
-	PapanLocation opposite;
 }
 
 
 
 //	Structs   	//	\\	//	\\	//	\\
-
-
 
 private static class Lubang {
 	CommonModels.Pemain owner;
@@ -184,7 +179,7 @@ public TwoPlayerBackend() {
 
 
 
-//	\\	Constructor helpers	\\	//	\\
+//	Constructor helpers   	\\	//	\\
 
 private void initialisePapan() {
 	// Initialise lubangs in the heap as an array..
