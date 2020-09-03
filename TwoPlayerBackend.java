@@ -156,7 +156,8 @@ private CommonModels.GameState gameState;
 private CommonModels.Pemain pemain1, pemain2;
 private CommonModels.Pemain currentPlayer;
 
-private EnumMap<PapanLocation, Lubang> papan;
+private final EnumMap<PapanLocation, Lubang> papan = 
+	new EnumMap<>(PapanLocation.class);
 // Perfect. How convenient.
 
 
