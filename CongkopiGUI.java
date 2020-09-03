@@ -141,16 +141,15 @@ class CongkopiPanel extends JPanel {
 			// Then draw kampung2 themselves. Be careful of margins!
 		}
 	}
-
 }
 
 
 
 //	\\	Private helpers //  \\  //  \\
 
-private static Shape generateSeedShape() {
+private static Shape generateBijiShape() {
 	// Generate random X and Y.
-	// We want the seed in a circular bowl, so use circle math.
+	// We want the Biji in a circular bowl, so use circle math.
 	double angle = Math.random() * 2 * Math.PI;
 	double radius = Math.random() * (32 - 8);
 	// (Radius matches kampungRadius, but we're hardcoding for now.
@@ -158,33 +157,36 @@ private static Shape generateSeedShape() {
 	double x = Math.abs(Math.cos(angle) * radius);
 	double y = Math.abs(Math.sin(angle) * radius);
 	
-	// Width and height will be the same for each seed.
+	// Width and height will be the same for each Biji.
 	double w = 4;
 	double h = 1;
 
-	Shape seedShape = new Ellipse2D.Double(x, y, w, h);
+	Shape bijiShape = new Ellipse2D.Double(x, y, w, h);
 	
-	// Okay, now here's the absurd part. We'll also rotate the seed
-	// randomly, so that it looks naturally placed. We'll use
-	// java.awt.geom.AffineTransform for this, which is happy to
-	// work with java.awt.Shape.
-	
-	// For now we'll generate a new AffineTransform everytime,
-	// but it is rather costly, so if it starts to lag, just pick
-	// one of several predefined angles, and get an already-initialised
-	// AffineTransform for it.
+	/*
+	Okay, now here's the absurd part. We'll also rotate the Biji
+	randomly, so that it looks naturally placed. We'll use
+	java.awt.geom.AffineTransform for this, which is happy to
+	work with java.awt.Shape.
+	*/
+	/*
+	For now we'll generate a new AffineTransform everytime,
+	but it is rather costly, so if this ends up rather laggy,
+	create a pool of transforms for a bunch of angles,
+	then randomly select from it for each biji.
+	*/	
 	AffineTransform rotationTransform = new AffineTransform();
 	rotationTransform.rotate(Math.random() * 2 * Math.PI);
 	
-	// Okay! We're done.
-	seedShape = rotationTransform.createTransformedShape(seedShape);
-	return seedShape;
+	// Alright! We're done.
+	bijiShape = rotationTransform.createTransformedShape(bijiShape);
+	return bijiShape;
 }
 
-private static void generateAndAddSeedShapeIfNeeded(Models.Seed seed) {
-	assert seed != null;
-	if (seed.shape == null) {
-		seed.shape = generateSeedShape();
+private static void generateBijiShapeIfNeeded(CommonModels.Biji biji) {
+	assert biji != null;
+	if (biji.shape == null) {
+		biji.shape = generateBijiShape();
 	}
 }
 
